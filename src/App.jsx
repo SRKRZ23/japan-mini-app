@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import HomeScreen from './HomeScreen';
 import GameScreen from './GameScreen';
 import { supabase } from './supabaseClient';
 
 function App() {
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedLesson, setSelectedLesson] = useState(null);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -31,11 +33,19 @@ function App() {
     }
   }, []);
 
-  if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Загрузка...</div>;
+  if (loading) return <div style={{ padding: '20px', textAlign: 'center', fontSize: '18px' }}>Loading...</div>;
 
   return (
     <div className="App">
-      <GameScreen userId={userId} />
+      {selectedLesson ? (
+        <GameScreen 
+          lesson={selectedLesson} 
+          userId={userId} 
+          onBack={() => setSelectedLesson(null)} 
+        />
+      ) : (
+        <HomeScreen onSelectLesson={(lesson) => setSelectedLesson(lesson)} />
+      )}
     </div>
   );
 }
