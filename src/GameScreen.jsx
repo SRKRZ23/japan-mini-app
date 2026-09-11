@@ -7,6 +7,8 @@ export default function GameScreen({ lesson, userId, onBack }) {
   const [hearts, setHearts] = useState(3);
   const [selectedText, setSelectedText] = useState(null);
   const [isCorrect, setIsCorrect] = useState(null);
+  const [showCorrect, setShowCorrect] = useState(false);
+  const [locked, setLocked] = useState(false);
   const audioRef = useRef(null);
 
   const question = lesson.questions[currentQ];
@@ -42,9 +44,27 @@ export default function GameScreen({ lesson, userId, onBack }) {
     }
   };
 
+  const goToNext = () => {
+    if (currentQ < lesson.questions.length - 1) {
+      setCurrentQ(currentQ + 1);
+      setSelectedText(null);
+      setIsCorrect(null);
+      setShowCorrect(false);
+      setLocked(false);
+    } else {
+      saveProgress(score);
+      alert("Lesson complete! Score: " + score);
+      onBack();
+    }
+  };
+
   const handleAnswer = (text) => {
+    if (locked) return;
+    setLocked(true);
     setSelectedText(text);
+
     if (text === question.correctText) {
+      // ПРАВИЛЬНЫЙ ОТВЕТ
       setIsCorrect(true);
       const newScore = score + 10;
       setScore(newScore);
@@ -55,6 +75,7 @@ export default function GameScreen({ lesson, userId, onBack }) {
           setCurrentQ(currentQ + 1);
           setSelectedText(null);
           setIsCorrect(null);
+          setLocked(false);
         } else {
           saveProgress(newScore);
           alert("Lesson complete! Score: " + newScore);
@@ -62,16 +83,68 @@ export default function GameScreen({ lesson, userId, onBack }) {
         }
       }, 1500);
     } else {
+      // НЕПРАВИЛЬНЫЙ ОТВЕТ
       setIsCorrect(false);
-      setHearts(hearts - 1);
+      setShowCorrect(true); // Показываем правильный ответ зеленым
+      const newHearts = hearts - 1;
+      setHearts(newHearts);
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
-      
-      if (hearts - 1 <= 0) {
-        saveProgress(score);
-        alert("Game over! You lost all hearts.");
-        onBack();
-      }
+
+      setTimeout(() => {
+        if (newHearts <= 0) {
+          saveProgress(score);
+          alert("Game over! You lost all hearts. Score: " + score);
+          onBack();
+        } else {
+          // Переходим к следующему вопросу, даже если ответ был неверный
+          if (currentQ < lesson.questions.length - 1) {
+            setCurrentQ(currentQ + 1);
+            setSelectedText(null);
+            setIsCorrect(null);
+            setShowCorrect(false);
+            setLocked(false);
+          } else {
+            saveProgress(score);
+            alert("Lesson finished! Score: " + score);
+            onBack();
+          }
+        }
+      }, 2000);
     }
+  };
+
+  // Определяем цвет кнопки
+  const getButtonStyle = (opt) => {
+    let backgroundColor = '#fff';
+    let color = '#333';
+    let borderColor = '#ddd';
+
+    if (selectedText === opt.text) {
+      // Пользователь нажал на эту кнопку
+      backgroundColor = isCorrect ? '#4CAF50' : '#F44336';
+      color = 'white';
+      borderColor = backgroundColor;
+    } else if (showCorrect && opt.text === question.correctText) {
+      // Показываем правильный ответ, если был выбран неправильный
+      backgroundColor = '#4CAF50';
+      color = 'white';
+      borderColor = '#4CAF50';
+    }
+
+    return {
+      padding: '16px',
+      fontSize: '18px',
+      borderRadius: '12px',
+      border: `1px solid ${borderColor}`,
+      cursor: locked ? 'not-allowed' : 'pointer',
+      backgroundColor,
+      color,
+      transition: 'all 0.2s',
+      fontWeight: 'bold',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+      width: '100%',
+      opacity: locked && selectedText !== opt.text && !(showCorrect && opt.text === question.correctText) ? 0.5 : 1
+    };
   };
 
   return (
@@ -111,18 +184,20 @@ export default function GameScreen({ lesson, userId, onBack }) {
           <button
             key={opt.text}
             onClick={() => handleAnswer(opt.text)}
-            disabled={selectedText !== null}
-            style={{
-              padding: '16px', fontSize: '18px', borderRadius: '12px', border: '1px solid #ddd', cursor: 'pointer',
-              backgroundColor: selectedText === opt.text ? (isCorrect ? '#4CAF50' : '#F44336') : '#fff',
-              color: selectedText === opt.text ? 'white' : '#333',
-              transition: 'all 0.2s', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', width: '100%'
-            }}
+            disabled={locked}
+            style={getButtonStyle(opt)}
           >
             {opt.text}
           </button>
         ))}
       </div>
+
+      {/* Индикатор правильного ответа */}
+      {showCorrect && !isCorrect && (
+        <div style={{ marginTop: '16px', textAlign: 'center', color: '#666', fontSize: '14px', fontStyle: 'italic' }}>
+          The correct answer is highlighted in green. Moving to the next question...
+        </div>
+      )}
     </div>
   );
 }
