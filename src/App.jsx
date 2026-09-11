@@ -10,6 +10,7 @@ import { translations } from './data/translations';
 function App() {
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [currentScreen, setCurrentScreen] = useState('home');
   const [currentLang, setCurrentLang] = useState('EN');
@@ -21,8 +22,9 @@ function App() {
     const progressMap = {};
     if (data) {
       data.forEach(p => {
-        if (!progressMap[p.lesson_id] || p.score > progressMap[p.lesson_id].score) {
-          progressMap[p.lesson_id] = p;
+        const key = String(p.lesson_id);
+        if (!progressMap[key] || p.score > progressMap[key].score) {
+          progressMap[key] = p;
         }
       });
     }
@@ -31,27 +33,43 @@ function App() {
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand();
-      const authenticate = async () => {
-        try {
-          const { data, error } = await supabase.functions.invoke('telegram-auth', {
-            body: { initData: tg.initData }
-          });
-          if (error) throw error;
-          setUserId(data.userId);
-          await fetchProgress(data.userId);
-        } catch (err) {
-          console.error('Auth error:', err);
-        } finally {
-          setLoading(false);
-        }
-      };
-      authenticate();
-    } else {
+    console.log('🔵 Telegram WebApp:', tg ? 'AVAILABLE' : 'MISSING');
+    
+    if (!tg) {
+      setErrorMsg('Open this app inside Telegram to play');
       setLoading(false);
+      return;
     }
+
+    tg.ready();
+    tg.expand();
+    
+    console.log('🔵 initData length:', tg.initData?.length);
+    console.log('🔵 user:', tg.initDataUnsafe?.user?.username);
+
+    const authenticate = async () => {
+      try {
+        console.log('🔵 Calling telegram-auth...');
+        const { data, error } = await supabase.functions.invoke('telegram-auth', {
+          body: { initData: tg.initData }
+        });
+        
+        console.log('🔵 Response:', data);
+        console.log('🔵 Error:', error);
+        
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        
+        setUserId(data.userId);
+        await fetchProgress(data.userId);
+      } catch (err) {
+        console.error('🔴 Auth error:', err);
+        setErrorMsg('Auth failed: ' + (err.message || 'Unknown error'));
+      } finally {
+        setLoading(false);
+      }
+    };
+    authenticate();
   }, []);
 
   const handleBackToHome = async () => {
@@ -62,6 +80,14 @@ function App() {
   const t = translations[currentLang];
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-lg">{t.loading}</div>;
+
+  if (errorMsg) return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center gap-4">
+      <div className="text-6xl">⚠️</div>
+      <p className="font-body-md text-on-surface">{errorMsg}</p>
+      <p className="font-body-sm text-on-surface-variant text-xs">Check console for details (F12)</p>
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-surface text-on-surface font-body-md max-w-lg mx-auto w-full shadow-2xl relative">
