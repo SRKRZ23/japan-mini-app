@@ -4,7 +4,7 @@ export const lessons = [
     title: "Greetings",
     questions: [
       {
-        audioText: "\u304a\u306f\u3088\u3046 \u3054\u3056\u3044\u307e\u3059",
+        audioUrl: "/audio/ohayou.m4a",
         correctText: "\u304a\u306f\u3088\u3046 \u3054\u3056\u3044\u307e\u3059",
         options: [
           { text: "\u304a\u306f\u3088\u3046 \u3054\u3056\u3044\u307e\u3059", visual: "\uD83C\uDF05" },
@@ -14,7 +14,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u3053\u3093\u306b\u3061\u306f",
+        audioUrl: "/audio/konnichiwa.m4a",
         correctText: "\u3053\u3093\u306b\u3061\u306f",
         options: [
           { text: "\u3053\u3093\u306b\u3061\u306f", visual: "\u2600\uFE0F" },
@@ -24,7 +24,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u3053\u3093\u3070\u3093\u306f",
+        audioUrl: "/audio/konbanwa.m4a",
         correctText: "\u3053\u3093\u3070\u3093\u306f",
         options: [
           { text: "\u3053\u3093\u3070\u3093\u306f", visual: "\uD83C\uDF19" },
@@ -34,7 +34,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u304a\u3084\u3059\u307f\u306a\u3055\u3044",
+        audioUrl: "/audio/oyasuminasai.m4a",
         correctText: "\u304a\u3084\u3059\u307f\u306a\u3055\u3044",
         options: [
           { text: "\u304a\u3084\u3059\u307f\u306a\u3055\u3044", visual: "\uD83C\uDF0C" },
@@ -50,7 +50,7 @@ export const lessons = [
     title: "Basic Vocabulary 1",
     questions: [
       {
-        audioText: "\u3042\u304b",
+        audioUrl: "/audio/aka.m4a",
         correctText: "\u3042\u304b",
         options: [
           { text: "\u3042\u304b", visual: "\uD83D\uDD34" },
@@ -60,7 +60,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u3044\u306c",
+        audioUrl: "/audio/inu.m4a",
         correctText: "\u3044\u306c",
         options: [
           { text: "\u3044\u306c", visual: "\uD83D\uDC36" },
@@ -70,7 +70,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u306d\u3053",
+        audioUrl: "/audio/neko.m4a",
         correctText: "\u306d\u3053",
         options: [
           { text: "\u306d\u3053", visual: "\uD83D\uDC31" },
@@ -80,7 +80,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u3059\u3057",
+        audioUrl: "/audio/sushi.m4a",
         correctText: "\u3059\u3057",
         options: [
           { text: "\u3059\u3057", visual: "\uD83C\uDF63" },
@@ -90,7 +90,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u304b\u3055",
+        audioUrl: "/audio/kasa.m4a",
         correctText: "\u304b\u3055",
         options: [
           { text: "\u304b\u3055", visual: "\u2602\uFE0F" },
@@ -100,7 +100,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u3068\u3051\u3044",
+        audioUrl: "/audio/tokei.m4a",
         correctText: "\u3068\u3051\u3044",
         options: [
           { text: "\u3068\u3051\u3044", visual: "\u231A" },
@@ -110,7 +110,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u3055\u304b\u306a",
+        audioUrl: "/audio/sakana.m4a",
         correctText: "\u3055\u304b\u306a",
         options: [
           { text: "\u3055\u304b\u306a", visual: "\uD83D\uDC1F" },
@@ -120,7 +120,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u3044\u3059",
+        audioUrl: "/audio/isu.m4a",
         correctText: "\u3044\u3059",
         options: [
           { text: "\u3044\u3059", visual: "\uD83E\uDE91" },
@@ -136,7 +136,7 @@ export const lessons = [
     title: "Basic Vocabulary 2",
     questions: [
       {
-        audioText: "\u304a\u304b\u306d",
+        audioUrl: "/audio/okane.m4a",
         correctText: "\u304a\u304b\u306d",
         options: [
           { text: "\u304a\u304b\u306d", visual: "\uD83D\uDCB0" },
@@ -146,7 +146,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u304f\u306b",
+        audioUrl: "/audio/kuni.m4a",
         correctText: "\u304f\u306b",
         options: [
           { text: "\u304f\u306b", visual: "\uD83D\uDDFE" },
@@ -156,7 +156,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u305f\u3051",
+        audioUrl: "/audio/take.m4a",
         correctText: "\u305f\u3051",
         options: [
           { text: "\u305f\u3051", visual: "\uD83C\uDF8B" },
@@ -166,7 +166,7 @@ export const lessons = [
         ]
       },
       {
-        audioText: "\u305d\u3068",
+        audioUrl: "/audio/soto.m4a",
         correctText: "\u305d\u3068",
         options: [
           { text: "\u305d\u3068", visual: "\uD83C\uDFDE\uFE0F" },

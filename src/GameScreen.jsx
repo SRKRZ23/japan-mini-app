@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 
 export default function GameScreen({ lesson, userId, onBack }) {
@@ -7,33 +7,25 @@ export default function GameScreen({ lesson, userId, onBack }) {
   const [hearts, setHearts] = useState(3);
   const [selectedText, setSelectedText] = useState(null);
   const [isCorrect, setIsCorrect] = useState(null);
+  const audioRef = useRef(null);
 
   const question = lesson.questions[currentQ];
 
   const playAudio = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(question.audioText);
-      utterance.lang = 'ja-JP';
-      utterance.rate = 0.8;
-      window.speechSynthesis.speak(utterance);
-    } else {
-      alert("Your browser does not support speech synthesis.");
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(e => console.log("Play blocked:", e));
     }
   };
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(question.audioText);
-        utterance.lang = 'ja-JP';
-        utterance.rate = 0.8;
-        window.speechSynthesis.speak(utterance);
+      if (audioRef.current) {
+        audioRef.current.play().catch(e => console.log("Autoplay blocked:", e));
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [currentQ, question.audioText]);
+  }, [currentQ]);
 
   const saveProgress = async (finalScore) => {
     if (!userId) return;
@@ -83,42 +75,48 @@ export default function GameScreen({ lesson, userId, onBack }) {
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <button onClick={onBack} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}>Back</button>
-        <span>Q: {currentQ + 1}/{lesson.questions.length}</span>
-        <span>❤️ {hearts}</span>
-        <span>⭐ {score}</span>
+    <div style={{ padding: '16px', fontFamily: 'sans-serif', maxWidth: '480px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+      <audio ref={audioRef} src={question.audioUrl} />
+      
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '8px', borderBottom: '1px solid #eee' }}>
+        <button onClick={onBack} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ccc', background: '#fff', cursor: 'pointer', fontSize: '14px' }}>← Back</button>
+        <span style={{ fontSize: '14px', fontWeight: 'bold' }}>{currentQ + 1}/{lesson.questions.length}</span>
+        <span style={{ fontSize: '14px' }}>❤️ {hearts}</span>
+        <span style={{ fontSize: '14px' }}>⭐ {score}</span>
       </div>
 
-      <h2 style={{ textAlign: 'center', fontSize: '20px', color: '#333' }}>{lesson.title}</h2>
+      {/* Title */}
+      <h2 style={{ textAlign: 'center', fontSize: '18px', color: '#333', marginBottom: '16px', marginTop: '0' }}>{lesson.title}</h2>
 
+      {/* Listen Button */}
       <button 
         onClick={playAudio} 
-        style={{ width: '100%', padding: '20px', fontSize: '24px', marginBottom: '20px', cursor: 'pointer', borderRadius: '12px', backgroundColor: '#2196F3', color: 'white', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+        style={{ width: '100%', padding: '16px', fontSize: '20px', marginBottom: '16px', cursor: 'pointer', borderRadius: '12px', backgroundColor: '#2196F3', color: 'white', border: 'none', boxShadow: '0 4px 6px rgba(33,150,243,0.3)', fontWeight: 'bold' }}
       >
-        Listen again
+        🔊 Listen again
       </button>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+      {/* Image Grid 2x2 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
         {question.options.map((opt) => (
           <div key={opt.text} style={{ 
-            textAlign: 'center', 
-            padding: '20px', 
-            backgroundColor: '#f9f9f9', 
-            borderRadius: '12px', 
-            fontSize: '60px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            height: '120px',
-            border: '2px solid #e0e0e0'
+            backgroundColor: '#f9f9f9', 
+            borderRadius: '12px', 
+            fontSize: '56px',
+            height: '110px',
+            border: '2px solid #e0e0e0',
+            userSelect: 'none'
           }}>
             {opt.visual}
           </div>
         ))}
       </div>
 
+      {/* Text Buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {question.options.map((opt) => (
           <button
@@ -126,18 +124,19 @@ export default function GameScreen({ lesson, userId, onBack }) {
             onClick={() => handleAnswer(opt.text)}
             disabled={selectedText !== null}
             style={{
-              padding: '18px',
-              fontSize: '20px',
-              borderRadius: '10px',
-              border: '1px solid #ccc',
+              padding: '16px',
+              fontSize: '18px',
+              borderRadius: '12px',
+              border: '1px solid #ddd',
               cursor: 'pointer',
               backgroundColor: selectedText === opt.text 
                 ? (isCorrect ? '#4CAF50' : '#F44336') 
                 : '#fff',
               color: selectedText === opt.text ? 'white' : '#333',
-              transition: 'background-color 0.3s',
+              transition: 'all 0.2s',
               fontWeight: 'bold',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+              width: '100%'
             }}
           >
             {opt.text}
