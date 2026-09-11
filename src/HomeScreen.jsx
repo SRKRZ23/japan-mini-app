@@ -1,9 +1,8 @@
 import React from 'react';
 import { lessons } from './data/lessons';
 
-const MASCOT_URL = "https://lh3.googleusercontent.com/aida-public/AB6AXuA7UelOZ2Dqt3xlIBxJeuKOM_G-rHLltGDraYhK9G2EmXdcmR4BmwXuAfUpD3jE8PzDKW1erjTaqzWnswlC4rflofRwZMsqTJDJ0lZkwGiPKEvB1QY_5omheM0RGTQXqLw_lOH7faIgoPr5dTIsaZl1yk_1K0x7M31pbrBYAfXpv-6XYi6D286mpD5qD6Sk78AvSb_Y75IfSUSRUfiHs9Gcb0zs-q1wBr9IBFgv1MP0_fYhWUFVYyL8"\;
+const MASCOT_URL = "https://lh3.googleusercontent.com/aida-public/AB6AXuA7UelOZ2Dqt3xlIBxJeuKOM_G-rHLltGDraYhK9G2EmXdcmR4BmwXuAfUpD3jE8PzDKW1erjTaqzWnswlC4rflofRwZMsqTJDJ0lZkwGiPKEvB1QY_5omheM0RGTQXqLw_lOH7faIgoPr5dTIsaZl1yk_1K0x7M31pbrBYAfXpv-6XYi6D286mpD5qD6Sk78AvSb_Y75IfSUSRUfiHs9Gcb0zs-q1wBr9IBFgv1MP0_fYhWUFVYyL8";
 
-// Позиции узлов на тропинке (чередование влево/вправо)
 const NODE_POSITIONS = [
   { translate: '0px',   icon: 'check_circle' },
   { translate: '-64px', icon: 'rice_bowl' },
@@ -14,12 +13,11 @@ const NODE_POSITIONS = [
 ];
 
 export default function HomeScreen({ onSelectLesson }) {
-  const completedCount = 3; // Заглушка: считаем 3 первых урока пройденными
+  const completedCount = 3;
   const currentLessonIndex = Math.min(completedCount, lessons.length - 1);
 
   return (
     <div className="min-h-screen flex flex-col antialiased bg-surface text-on-surface font-body-md">
-      {/* HEADER */}
       <header className="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
         <div className="h-16 px-margin flex items-center justify-between">
           <div className="flex items-center gap-space-xs">
@@ -28,7 +26,7 @@ export default function HomeScreen({ onSelectLesson }) {
             </div>
             <div className="flex flex-col">
               <h1 className="font-headline-sm text-headline-sm tracking-tight">Nihongo Quest</h1>
-              <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">Lvl 1 • Beginner</span>
+              <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">Lvl 1 &middot; Beginner</span>
             </div>
           </div>
           <div className="flex items-center gap-space-xs">
@@ -40,9 +38,7 @@ export default function HomeScreen({ onSelectLesson }) {
         </div>
       </header>
 
-      {/* CONTENT */}
       <main className="flex-1 flex flex-col relative w-full pt-16 pb-safe bg-surface">
-        {/* STATS ROW */}
         <div className="px-margin py-space-xs bg-surface-container-lowest grid grid-cols-3 gap-1.5 shadow-sm">
           <div className="flex items-center justify-center gap-1 py-1 px-1.5 rounded-xl bg-tertiary-fixed/40">
             <span className="material-symbols-outlined text-tertiary text-[18px]">local_fire_department</span>
@@ -58,7 +54,6 @@ export default function HomeScreen({ onSelectLesson }) {
           </div>
         </div>
 
-        {/* UNIT BANNER */}
         <div className="px-margin pt-space-md">
           <div className="p-space-md rounded-xl bg-primary text-on-primary shadow-md relative overflow-hidden">
             <div className="flex items-center justify-between mb-1">
@@ -74,12 +69,11 @@ export default function HomeScreen({ onSelectLesson }) {
             <h2 className="font-headline-sm text-headline-sm tracking-tight">Greetings &amp; Vocabulary</h2>
             <p className="font-body-sm text-body-sm text-inverse-primary/90 mt-0.5">Master Japanese essentials step by step</p>
             <div className="mt-space-sm w-full bg-on-primary-fixed-variant/40 h-2 rounded-full overflow-hidden">
-              <div className="bg-primary-fixed h-full rounded-full" style={{ width: `${(completedCount / lessons.length) * 100}%` }}></div>
+              <div className="bg-primary-fixed h-full rounded-full" style={{ width: (completedCount / lessons.length) * 100 + "%" }}></div>
             </div>
           </div>
         </div>
 
-        {/* PATH */}
         <div className="relative px-margin py-space-lg w-full flex flex-col items-center">
           <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }} xmlns="http://www.w3.org/2000/svg">
             <path
@@ -104,17 +98,15 @@ export default function HomeScreen({ onSelectLesson }) {
                 <div
                   key={lesson.id}
                   className="flex flex-col items-center"
-                  style={{ transform: `translateX(${pos.translate})` }}
+                  style={{ transform: "translateX(" + pos.translate + ")" }}
                 >
-                  {/* START BADGE for current */}
                   {isCurrent && (
                     <div className="mb-2 px-3 py-1 rounded-full bg-primary text-on-primary shadow-lg flex items-center gap-1.5 animate-bounce">
                       <span className="material-symbols-outlined text-primary-fixed text-[16px]">play_arrow</span>
-                      <span className="font-label-sm text-label-sm font-bold tracking-wide">START • +20 XP</span>
+                      <span className="font-label-sm text-label-sm font-bold tracking-wide">START &middot; +20 XP</span>
                     </div>
                   )}
 
-                  {/* NODE CIRCLE */}
                   <div className="relative">
                     {isCurrent && (
                       <div className="absolute -inset-2 rounded-full bg-primary/20 animate-ping"></div>
@@ -122,13 +114,12 @@ export default function HomeScreen({ onSelectLesson }) {
                     <button
                       onClick={() => !isLocked && onSelectLesson(lesson)}
                       disabled={isLocked}
-                      className={`relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform ${
-                        isCompleted
-                          ? 'bg-primary-container text-on-primary'
-                          : isCurrent
-                          ? 'bg-primary-container text-on-primary'
-                          : 'bg-surface-container-high text-on-surface-variant'
-                      }`}
+                      className={
+                        "relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform " +
+                        (isCompleted || isCurrent
+                          ? "bg-primary-container text-on-primary"
+                          : "bg-surface-container-high text-on-surface-variant")
+                      }
                     >
                       {isLocked ? (
                         <span className="material-symbols-outlined text-[28px]">lock</span>
@@ -138,7 +129,6 @@ export default function HomeScreen({ onSelectLesson }) {
                     </button>
                   </div>
 
-                  {/* STARS */}
                   {!isLocked && (
                     <div className="flex items-center gap-0.5 mt-1.5">
                       <span className="material-symbols-outlined text-tertiary-container text-[16px]">star</span>
@@ -147,10 +137,7 @@ export default function HomeScreen({ onSelectLesson }) {
                     </div>
                   )}
 
-                  {/* LABEL */}
-                  <span className={`font-label-md text-label-md mt-0.5 text-center max-w-[140px] ${
-                    isLocked ? 'text-on-surface-variant' : 'text-on-surface'
-                  }`}>
+                  <span className={"font-label-md text-label-md mt-0.5 text-center max-w-[140px] " + (isLocked ? "text-on-surface-variant" : "text-on-surface")}>
                     {idx + 1}. {lesson.title}
                   </span>
                   {isLocked && (
@@ -162,7 +149,6 @@ export default function HomeScreen({ onSelectLesson }) {
           </div>
         </div>
 
-        {/* DAILY MISSION */}
         <div className="px-margin pb-space-lg">
           <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-center justify-between">
             <div className="flex items-center gap-space-sm min-w-0">
@@ -181,7 +167,6 @@ export default function HomeScreen({ onSelectLesson }) {
           </div>
         </div>
 
-        {/* BOTTOM NAV */}
         <div className="sticky bottom-0 inset-x-0 bg-surface-container-lowest shadow-lg px-space-sm py-2 flex items-center justify-around z-40 pb-safe">
           <button className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl bg-primary-fixed text-on-primary-fixed">
             <span className="material-symbols-outlined text-[22px]">explore</span>
@@ -204,3 +189,4 @@ export default function HomeScreen({ onSelectLesson }) {
     </div>
   );
 }
+
