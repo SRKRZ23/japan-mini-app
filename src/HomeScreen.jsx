@@ -13,7 +13,7 @@ const NODE_POSITIONS = [
   { translate: '64px',  icon: 'military_tech' },
 ];
 
-export default function HomeScreen({ onSelectLesson, onOpenLeaderboard, userProgress, currentLang, setCurrentLang }) {
+export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, currentLang, setCurrentLang }) {
   const t = translations[currentLang];
   const completedCount = Object.keys(userProgress).length;
   const currentLessonIndex = Math.min(completedCount, lessons.length - 1);
@@ -152,15 +152,15 @@ export default function HomeScreen({ onSelectLesson, onOpenLeaderboard, userProg
           <span className="material-symbols-outlined text-[22px]">explore</span>
           <span className="font-label-sm text-label-sm font-bold">{t.quests}</span>
         </button>
-        <button className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-on-surface-variant">
+        <button onClick={() => onNavigate('vocab')} className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-on-surface-variant">
           <span className="material-symbols-outlined text-[22px]">menu_book</span>
           <span className="font-label-sm text-label-sm">{t.vocab}</span>
         </button>
-        <button onClick={onOpenLeaderboard} className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-on-surface-variant">
+        <button onClick={() => onNavigate('leaderboard')} className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-on-surface-variant">
           <span className="material-symbols-outlined text-[22px]">leaderboard</span>
           <span className="font-label-sm text-label-sm">{t.ranks}</span>
         </button>
-        <button className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-on-surface-variant">
+        <button onClick={() => onNavigate('profile')} className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-on-surface-variant">
           <span className="material-symbols-outlined text-[22px]">person</span>
           <span className="font-label-sm text-label-sm">{t.profile}</span>
         </button>

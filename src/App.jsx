@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import HomeScreen from './HomeScreen';
 import GameScreen from './GameScreen';
 import LeaderboardScreen from './LeaderboardScreen';
+import VocabScreen from './VocabScreen';
+import ProfileScreen from './ProfileScreen';
 import { supabase } from './supabaseClient';
 import { translations } from './data/translations';
 
@@ -52,11 +54,8 @@ function App() {
     }
   }, []);
 
-  // Функция возврата на главный экран с обновлением прогресса
   const handleBackToHome = async () => {
-    if (userId) {
-      await fetchProgress(userId);
-    }
+    if (userId) await fetchProgress(userId);
     setCurrentScreen('home');
   };
 
@@ -69,7 +68,7 @@ function App() {
       {currentScreen === 'home' && (
         <HomeScreen 
           onSelectLesson={(lesson) => { setSelectedLesson(lesson); setCurrentScreen('game'); }} 
-          onOpenLeaderboard={() => setCurrentScreen('leaderboard')}
+          onNavigate={(screen) => setCurrentScreen(screen)}
           userProgress={userProgress}
           currentLang={currentLang}
           setCurrentLang={setCurrentLang}
@@ -87,6 +86,22 @@ function App() {
       {currentScreen === 'leaderboard' && (
         <LeaderboardScreen 
           userId={userId} 
+          onBack={() => setCurrentScreen('home')} 
+          currentLang={currentLang}
+          setCurrentLang={setCurrentLang}
+        />
+      )}
+      {currentScreen === 'vocab' && (
+        <VocabScreen 
+          onBack={() => setCurrentScreen('home')} 
+          currentLang={currentLang}
+          setCurrentLang={setCurrentLang}
+        />
+      )}
+      {currentScreen === 'profile' && (
+        <ProfileScreen 
+          userId={userId}
+          userProgress={userProgress}
           onBack={() => setCurrentScreen('home')} 
           currentLang={currentLang}
           setCurrentLang={setCurrentLang}
