@@ -23,9 +23,17 @@ export default function GameScreen({ lesson, userId, onBack }) {
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => playAudio(), 500);
+    const timer = setTimeout(() => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(question.audioText);
+        utterance.lang = 'ja-JP';
+        utterance.rate = 0.8;
+        window.speechSynthesis.speak(utterance);
+      }
+    }, 500);
     return () => clearTimeout(timer);
-  }, [currentQ]);
+  }, [currentQ, question.audioText]);
 
   const saveProgress = async (finalScore) => {
     if (!userId) return;
