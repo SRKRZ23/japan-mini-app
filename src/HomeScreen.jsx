@@ -21,7 +21,8 @@ export default function HomeScreen({ onSelectLesson, onOpenLeaderboard, userProg
   const getStars = (lessonId) => {
     const progress = userProgress[lessonId];
     if (!progress) return 0;
-    const maxScore = lessons.find(l => l.id === lessonId)?.questions.length * 20 || 100;
+    const lessonData = lessons.find(l => l.id === lessonId);
+    const maxScore = lessonData ? lessonData.questions.length * 20 : 100;
     const percent = (progress.score / maxScore) * 100;
     if (percent >= 90) return 3;
     if (percent >= 60) return 2;
@@ -99,7 +100,6 @@ export default function HomeScreen({ onSelectLesson, onOpenLeaderboard, userProg
               const stars = getStars(lesson.id);
               const isCompleted = stars > 0;
               const isCurrent = idx === currentLessonIndex;
-              const isLocked = idx > currentLessonIndex;
               const pos = NODE_POSITIONS[idx % NODE_POSITIONS.length];
 
               return (
@@ -112,19 +112,16 @@ export default function HomeScreen({ onSelectLesson, onOpenLeaderboard, userProg
                   )}
                   <div className="relative">
                     {isCurrent && <div className="absolute -inset-2 rounded-full bg-primary/20 animate-ping"></div>}
-                    <button onClick={() => !isLocked && onSelectLesson(lesson)} disabled={isLocked} className={"relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform " + (isCompleted || isCurrent ? "bg-primary-container text-on-primary" : "bg-surface-container-high text-on-surface-variant")}>
-                      {isLocked ? <span className="material-symbols-outlined text-[28px]">lock</span> : <span className="material-symbols-outlined text-[30px]">{pos.icon}</span>}
+                    <button onClick={() => onSelectLesson(lesson)} className={"relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform " + (isCompleted || isCurrent ? "bg-primary-container text-on-primary" : "bg-surface-container-high text-on-surface-variant")}>
+                      <span className="material-symbols-outlined text-[30px]">{pos.icon}</span>
                     </button>
                   </div>
-                  {!isLocked && (
-                    <div className="flex items-center gap-0.5 mt-1.5">
-                      {[1, 2, 3].map(star => (
-                        <span key={star} className={`material-symbols-outlined text-[16px] ${star <= stars ? 'text-tertiary-container' : 'text-outline-variant'}`}>star</span>
-                      ))}
-                    </div>
-                  )}
-                  <span className={"font-label-md text-label-md mt-0.5 text-center max-w-[140px] " + (isLocked ? "text-on-surface-variant" : "text-on-surface")}>{idx + 1}. {lesson.title}</span>
-                  {isLocked && <span className="font-label-sm text-label-sm text-tertiary">{t.locked}</span>}
+                  <div className="flex items-center gap-0.5 mt-1.5">
+                    {[1, 2, 3].map(star => (
+                      <span key={star} className={`material-symbols-outlined text-[16px] ${star <= stars ? 'text-tertiary-container' : 'text-outline-variant'}`}>star</span>
+                    ))}
+                  </div>
+                  <span className="font-label-md text-label-md mt-0.5 text-center max-w-[140px] text-on-surface">{idx + 1}. {lesson.title}</span>
                 </div>
               );
             })}

@@ -58,9 +58,9 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!isCorrect && hearts <= 0) {
-      saveProgress(score);
+      await saveProgress(score);
       alert(t.gameOver);
       onBack();
       return;
@@ -71,10 +71,37 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
       setIsAnswered(false);
       setIsCorrect(null);
     } else {
-      saveProgress(score);
+      await saveProgress(score);
       alert(t.lessonComplete + score);
       onBack();
     }
+  };
+
+  // Логика цветов для карточек и кнопок
+  const getCardClass = (opt) => {
+    const isSelected = selectedId === opt.id;
+    let base = "cursor-pointer relative bg-surface-container-lowest rounded-xl p-space-xs flex flex-col items-center transition-all duration-200 ";
+    if (isAnswered) {
+      if (isCorrect && isSelected) return base + "bg-primary-container/20 border-2 border-primary shadow-md";
+      if (!isCorrect && isSelected) return base + "bg-error-container/20 border-2 border-error shadow-md";
+      if (!isCorrect && opt.id === question.correctId) return base + "bg-primary-container/10 border-2 border-primary/50 shadow-sm";
+      return base + "opacity-50 shadow-sm";
+    }
+    if (isSelected) return base + "bg-primary-container/10 border-2 border-primary -translate-y-0.5 shadow-md";
+    return base + "shadow-sm opacity-90 hover:opacity-100";
+  };
+
+  const getWordBtnClass = (opt) => {
+    const isSelected = selectedId === opt.id;
+    let base = "flex flex-col items-center justify-center p-space-sm rounded-xl transition-all duration-150 shadow-sm ";
+    if (isAnswered) {
+      if (isCorrect && isSelected) return base + "bg-primary text-on-primary shadow-md";
+      if (!isCorrect && isSelected) return base + "bg-error text-on-error shadow-md";
+      if (!isCorrect && opt.id === question.correctId) return base + "bg-primary/50 text-on-primary shadow-sm";
+      return base + "bg-surface-container text-on-surface-variant opacity-50";
+    }
+    if (isSelected) return base + "bg-primary text-on-primary shadow-md";
+    return base + "bg-surface-container-lowest text-on-surface hover:bg-surface-container-low";
   };
 
   return (
@@ -145,25 +172,27 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
         </div>
 
         <div className="grid grid-cols-2 gap-space-sm">
-          {options.map((opt) => {
-            const isSelected = selectedId === opt.id;
-            return (
-              <div key={opt.id} onClick={() => !isAnswered && setSelectedId(opt.id)} className={`cursor-pointer relative bg-surface-container-lowest rounded-xl p-space-xs flex flex-col items-center transition-all duration-200 shadow-md ${isSelected ? 'bg-primary-container/10 -translate-y-0.5' : 'shadow-sm opacity-90'}`}>
-                <div className="w-full aspect-square rounded-lg overflow-hidden relative bg-surface-container flex items-center justify-center text-6xl">
-                  {opt.visual}
-                  <div className={`absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full font-stat-counter text-stat-counter shadow-sm ${isSelected ? 'bg-primary text-on-primary' : 'bg-surface-container-highest text-on-surface-variant'}`}>
-                    {opt.id.toUpperCase()}
-                  </div>
-                  {isSelected && (
-                    <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-md">
-                      <span className="material-symbols-outlined text-[16px]">check</span>
-                    </div>
-                  )}
+          {options.map((opt) => (
+            <div key={opt.id} onClick={() => !isAnswered && setSelectedId(opt.id)} className={getCardClass(opt)}>
+              <div className="w-full aspect-square rounded-lg overflow-hidden relative bg-surface-container flex items-center justify-center text-6xl">
+                {opt.visual}
+                <div className={`absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full font-stat-counter text-stat-counter shadow-sm ${selectedId === opt.id ? 'bg-primary text-on-primary' : 'bg-surface-container-highest text-on-surface-variant'}`}>
+                  {opt.id.toUpperCase()}
                 </div>
-                <span className="font-label-md text-label-md text-on-surface mt-1.5 text-center font-bold">{opt.kanji}</span>
+                {isAnswered && opt.id === question.correctId && (
+                  <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-md">
+                    <span className="material-symbols-outlined text-[16px]">check</span>
+                  </div>
+                )}
+                {isAnswered && !isCorrect && selectedId === opt.id && (
+                  <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-error flex items-center justify-center text-on-error shadow-md">
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                  </div>
+                )}
               </div>
-            );
-          })}
+              <span className="font-label-md text-label-md text-on-surface mt-1.5 text-center font-bold">{opt.kanji}</span>
+            </div>
+          ))}
         </div>
 
         <div className="flex items-center justify-between pt-space-xs">
@@ -178,10 +207,10 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
           {options.map((opt) => {
             const isSelected = selectedId === opt.id;
             return (
-              <button key={opt.id} onClick={() => !isAnswered && setSelectedId(opt.id)} className={`flex flex-col items-center justify-center p-space-sm rounded-xl transition-all duration-150 active:translate-y-0.5 shadow-sm ${isSelected ? 'bg-primary text-on-primary shadow-md' : 'bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'}`}>
-                {showFurigana && <span className={`text-[11px] leading-none mb-0.5 ${isSelected ? 'opacity-90' : 'opacity-70'}`}>{opt.furigana}</span>}
+              <button key={opt.id} onClick={() => !isAnswered && setSelectedId(opt.id)} className={getWordBtnClass(opt)}>
+                {showFurigana && <span className={`text-[11px] leading-none mb-0.5 ${isSelected || (isAnswered && opt.id === question.correctId) ? 'opacity-90' : 'opacity-70'}`}>{opt.furigana}</span>}
                 <span className="font-japanese-card text-headline-sm font-bold tracking-wide">{opt.kanji}</span>
-                <span className={`font-body-sm text-body-sm mt-0.5 ${isSelected ? 'text-on-primary/90' : 'text-on-surface-variant'}`}>{opt.translation[currentLang]}</span>
+                <span className={`font-body-sm text-body-sm mt-0.5 ${isSelected || (isAnswered && opt.id === question.correctId) ? 'text-on-primary/90' : 'text-on-surface-variant'}`}>{opt.translation[currentLang]}</span>
               </button>
             );
           })}

@@ -52,6 +52,14 @@ function App() {
     }
   }, []);
 
+  // Функция возврата на главный экран с обновлением прогресса
+  const handleBackToHome = async () => {
+    if (userId) {
+      await fetchProgress(userId);
+    }
+    setCurrentScreen('home');
+  };
+
   const t = translations[currentLang];
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-lg">{t.loading}</div>;
@@ -71,7 +79,7 @@ function App() {
         <GameScreen 
           lesson={selectedLesson} 
           userId={userId} 
-          onBack={() => { setCurrentScreen('home'); fetchProgress(userId); }} 
+          onBack={handleBackToHome} 
           currentLang={currentLang}
           setCurrentLang={setCurrentLang}
         />
