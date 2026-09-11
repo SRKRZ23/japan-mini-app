@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
+import { translations } from './data/translations';
 
-export default function GameScreen({ lesson, userId, onBack }) {
+export default function GameScreen({ lesson, userId, onBack, currentLang, setCurrentLang }) {
   const [currentQ, setCurrentQ] = useState(0);
   const [score, setScore] = useState(0);
   const [hearts, setHearts] = useState(5);
@@ -9,20 +10,11 @@ export default function GameScreen({ lesson, userId, onBack }) {
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(null);
   const [showFurigana, setShowFurigana] = useState(true);
-  const [currentLang, setCurrentLang] = useState('EN');
   const [tutorialOpen, setTutorialOpen] = useState(false);
-  const [combo, setCombo] = useState(1);
   const audioRef = useRef(null);
 
   const question = lesson.questions[currentQ];
   const options = question.options;
-
-  const translations = {
-    EN: { check: "CHECK ANSWER", guide: "Listen to the audio, identify the photo, and match the Japanese vocabulary!", congrats: "Correct! Sugoi! 🎉", reward: "+20 XP Earned", wrong: "Incorrect. Try again!" },
-    RU: { check: "ПРОВЕРИТЬ", guide: "Послушай произношение, найди картинку и выбери правильное слово!", congrats: "Правильно! Молодец! 🎉", reward: "+20 Опыта", wrong: "Неправильно. Попробуй еще!" },
-    UZ: { check: "TEKSHIRISH", guide: "Tinglang, rasmga qarang va mos yaponcha so'zni belgilang!", congrats: "To'g'ri! Barakalla! 🎉", reward: "+20 XP", wrong: "Xato. Yana urinib ko'ring!" }
-  };
-
   const t = translations[currentLang];
 
   const playAudio = () => {
@@ -61,21 +53,18 @@ export default function GameScreen({ lesson, userId, onBack }) {
 
     if (correct) {
       setScore(score + 20);
-      setCombo(combo + 1);
     } else {
       setHearts(hearts - 1);
-      setCombo(1);
     }
   };
 
   const handleNext = () => {
     if (!isCorrect && hearts <= 0) {
       saveProgress(score);
-      alert("Game over! You lost all hearts.");
+      alert(t.gameOver);
       onBack();
       return;
     }
-
     if (currentQ < lesson.questions.length - 1) {
       setCurrentQ(currentQ + 1);
       setSelectedId(null);
@@ -83,17 +72,15 @@ export default function GameScreen({ lesson, userId, onBack }) {
       setIsCorrect(null);
     } else {
       saveProgress(score);
-      alert("Lesson complete! Score: " + score);
+      alert(t.lessonComplete + score);
       onBack();
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col antialiased bg-surface text-on-surface font-body-md">
+    <div className="flex-1 flex flex-col relative w-full bg-surface pb-20">
       <audio ref={audioRef} src={question.audioUrl} />
-
-      {/* HEADER */}
-      <header className="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+      <header className="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)] max-w-lg mx-auto">
         <div className="h-16 px-margin flex items-center justify-between">
           <button onClick={onBack} className="w-11 h-11 -ml-space-xs flex items-center justify-center text-on-surface hover:text-primary transition-colors">
             <span className="material-symbols-outlined text-[24px]">arrow_back</span>
@@ -103,25 +90,6 @@ export default function GameScreen({ lesson, userId, onBack }) {
               <span className="material-symbols-outlined text-secondary text-[16px]">favorite</span>
               <span className="font-stat-counter text-stat-counter text-secondary text-[13px]">{hearts}</span>
             </div>
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 flex flex-col relative w-full pt-20 pb-safe px-margin gap-space-md">
-        
-        {/* PROGRESS & LANG */}
-        <div className="flex flex-col gap-space-xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-space-xs">
-              <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">Q {currentQ + 1} of {lesson.questions.length}</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
-              <span className="font-stat-counter text-stat-counter text-tertiary flex items-center gap-0.5">
-                <span className="material-symbols-outlined text-[16px]">bolt</span> +20 XP
-              </span>
-            </div>
             <div className="flex items-center bg-surface-container-high p-0.5 rounded-full shadow-sm">
               {['RU', 'UZ', 'EN'].map(lang => (
                 <button key={lang} onClick={() => setCurrentLang(lang)} className={`px-2 py-0.5 rounded-full font-label-sm text-label-sm transition-all ${currentLang === lang ? 'bg-surface-container-lowest text-primary shadow-sm font-bold' : 'text-on-surface-variant'}`}>
@@ -130,14 +98,22 @@ export default function GameScreen({ lesson, userId, onBack }) {
               ))}
             </div>
           </div>
+        </div>
+      </header>
+
+      <main className="flex-1 flex flex-col pt-20 pb-safe px-margin gap-space-sm">
+        <div className="flex flex-col gap-space-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">Q {currentQ + 1} of {lesson.questions.length}</span>
+            <span className="font-stat-counter text-stat-counter text-tertiary flex items-center gap-0.5">
+              <span className="material-symbols-outlined text-[16px]">bolt</span> +20 {t.xp}
+            </span>
+          </div>
           <div className="w-full h-3 bg-surface-container-high rounded-full overflow-hidden p-0.5 shadow-inner">
-            <div className="h-full bg-primary-container rounded-full relative shadow-sm transition-all duration-500" style={{ width: `${((currentQ + 1) / lesson.questions.length) * 100}%` }}>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-surface-bright/40 to-transparent animate-pulse rounded-full"></div>
-            </div>
+            <div className="h-full bg-primary-container rounded-full relative shadow-sm transition-all duration-500" style={{ width: `${((currentQ + 1) / lesson.questions.length) * 100}%` }}></div>
           </div>
         </div>
 
-        {/* TUTORIAL BANNER */}
         <div className="bg-surface-container-low rounded-xl p-space-sm shadow-sm">
           <div className="flex items-center justify-between cursor-pointer" onClick={() => setTutorialOpen(!tutorialOpen)}>
             <div className="flex items-center gap-space-xs">
@@ -150,12 +126,11 @@ export default function GameScreen({ lesson, userId, onBack }) {
           </div>
           {tutorialOpen && (
             <div className="mt-space-xs pt-space-xs border-t border-outline-variant/30 text-on-surface-variant">
-              <p className="font-body-sm text-body-sm mt-0.5">{t.guide}</p>
+              <p className="font-body-sm text-body-sm mt-0.5">{t.tutorial}</p>
             </div>
           )}
         </div>
 
-        {/* AUDIO PROMPT */}
         <div className="bg-surface-container-lowest rounded-xl p-space-md flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-space-md">
             <button onClick={playAudio} className="relative w-14 h-14 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-md active:scale-95 transition-transform">
@@ -164,12 +139,11 @@ export default function GameScreen({ lesson, userId, onBack }) {
             </button>
             <div className="flex flex-col min-w-0">
               <span className="font-label-sm text-label-sm text-primary uppercase font-bold tracking-wider">Audio Prompt</span>
-              <p className="font-headline-sm text-headline-sm text-on-surface truncate">Listen carefully</p>
+              <p className="font-headline-sm text-headline-sm text-on-surface truncate">{t.listenAgain}</p>
             </div>
           </div>
         </div>
 
-        {/* 2x2 IMAGE GRID */}
         <div className="grid grid-cols-2 gap-space-sm">
           {options.map((opt) => {
             const isSelected = selectedId === opt.id;
@@ -192,22 +166,20 @@ export default function GameScreen({ lesson, userId, onBack }) {
           })}
         </div>
 
-        {/* SCRIPT CHOICE HEADER */}
         <div className="flex items-center justify-between pt-space-xs">
-          <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-bold">Match Japanese Script</span>
+          <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-bold">{t.matchScript}</span>
           <button onClick={() => setShowFurigana(!showFurigana)} className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface">
             <span className="material-symbols-outlined text-[16px] text-primary">translate</span>
-            <span className="font-label-sm text-label-sm font-bold">Furigana: {showFurigana ? 'ON' : 'OFF'}</span>
+            <span className="font-label-sm text-label-sm font-bold">{t.furigana}: {showFurigana ? 'ON' : 'OFF'}</span>
           </button>
         </div>
 
-        {/* WORD CHOICES */}
         <div className="grid grid-cols-2 gap-space-sm select-none">
           {options.map((opt) => {
             const isSelected = selectedId === opt.id;
             return (
               <button key={opt.id} onClick={() => !isAnswered && setSelectedId(opt.id)} className={`flex flex-col items-center justify-center p-space-sm rounded-xl transition-all duration-150 active:translate-y-0.5 shadow-sm ${isSelected ? 'bg-primary text-on-primary shadow-md' : 'bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'}`}>
-                {showFurigana && <span className={`text-[11px] font-japanese-ruby leading-none mb-0.5 ${isSelected ? 'opacity-90' : 'opacity-70'}`}>{opt.furigana}</span>}
+                {showFurigana && <span className={`text-[11px] leading-none mb-0.5 ${isSelected ? 'opacity-90' : 'opacity-70'}`}>{opt.furigana}</span>}
                 <span className="font-japanese-card text-headline-sm font-bold tracking-wide">{opt.kanji}</span>
                 <span className={`font-body-sm text-body-sm mt-0.5 ${isSelected ? 'text-on-primary/90' : 'text-on-surface-variant'}`}>{opt.translation[currentLang]}</span>
               </button>
@@ -215,7 +187,6 @@ export default function GameScreen({ lesson, userId, onBack }) {
           })}
         </div>
 
-        {/* FEEDBACK PANEL */}
         {isAnswered && (
           <div className={`rounded-xl p-space-sm flex items-center justify-between shadow-sm transition-all duration-300 ${isCorrect ? 'bg-primary-fixed/30' : 'bg-error-container/30'}`}>
             <div className="flex items-center gap-space-xs">
@@ -223,25 +194,17 @@ export default function GameScreen({ lesson, userId, onBack }) {
                 <span className="material-symbols-outlined text-[22px]">{isCorrect ? 'stars' : 'close'}</span>
               </div>
               <div className="flex flex-col">
-                <span className={`font-headline-sm text-headline-sm font-extrabold ${isCorrect ? 'text-primary' : 'text-error'}`}>
-                  {isCorrect ? t.congrats : t.wrong}
-                </span>
-                <span className="font-label-sm text-label-sm text-tertiary font-bold">{isCorrect ? t.reward : 'No reward'}</span>
+                <span className={`font-headline-sm text-headline-sm font-extrabold ${isCorrect ? 'text-primary' : 'text-error'}`}>{isCorrect ? t.correct : t.incorrect}</span>
+                <span className="font-label-sm text-label-sm text-tertiary font-bold">{isCorrect ? t.reward : ''}</span>
               </div>
-            </div>
-            <div className="px-2 py-1 rounded-full bg-surface-container-high text-primary font-stat-counter text-stat-counter">
-              {isCorrect ? '100% Match' : 'Try again'}
             </div>
           </div>
         )}
 
-        {/* ACTION BUTTONS */}
-        <div className="flex items-center gap-space-sm pt-space-xs pb-4">
+        <div className="flex items-center gap-space-sm pt-space-xs">
           {!isAnswered ? (
             <>
-              <button onClick={onBack} className="px-4 py-3.5 rounded-xl bg-surface-container text-on-surface-variant font-label-md font-bold transition-transform active:scale-95 hover:bg-surface-container-high">
-                SKIP
-              </button>
+              <button onClick={onBack} className="px-4 py-3.5 rounded-xl bg-surface-container text-on-surface-variant font-label-md font-bold transition-transform active:scale-95 hover:bg-surface-container-high">{t.skip}</button>
               <button onClick={handleSubmit} disabled={!selectedId} className={`flex-1 py-3.5 rounded-xl font-headline-sm flex items-center justify-center gap-space-xs shadow-md transition-all active:scale-[0.98] ${selectedId ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant cursor-not-allowed'}`}>
                 <span className="tracking-wide">{t.check}</span>
                 <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
@@ -249,12 +212,11 @@ export default function GameScreen({ lesson, userId, onBack }) {
             </>
           ) : (
             <button onClick={handleNext} className="flex-1 py-3.5 rounded-xl bg-primary text-on-primary font-headline-sm flex items-center justify-center gap-space-xs shadow-md transition-all active:scale-[0.98]">
-              <span className="tracking-wide">{currentQ < lesson.questions.length - 1 ? 'CONTINUE' : 'FINISH'}</span>
+              <span className="tracking-wide">{currentQ < lesson.questions.length - 1 ? t.continue : t.finish}</span>
               <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
             </button>
           )}
         </div>
-
       </main>
     </div>
   );
