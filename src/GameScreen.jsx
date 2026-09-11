@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { supabase } from './supabaseClient';
 
-// Временные данные для примера (в реальном проекте брать из БД)
 const QUESTIONS = [
   {
     id: 1,
-    audioUrl: '/audio/ohayou.mp3', // Положите файл в public/audio/ohayou.mp3
+    audioUrl: '/audio/ohayou.mp3',
     correctText: 'おはよう ございます',
     options: [
       { id: 'a', text: 'おはよう ございます', img: '/img/morning.png' },
@@ -15,17 +15,15 @@ const QUESTIONS = [
   }
 ];
 
-export default function GameScreen() {
+export default function GameScreen({ userId }) {
   const [currentQ, setCurrentQ] = useState(0);
   const [score, setScore] = useState(0);
   const [hearts, setHearts] = useState(3);
   const [selectedText, setSelectedText] = useState(null);
   const [isCorrect, setIsCorrect] = useState(null);
   const audioRef = useRef(null);
-
   const question = QUESTIONS[currentQ];
 
-  // Автовоспроизведение аудио при загрузке вопроса
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.play().catch(e => console.log("Автовоспроизведение заблокировано:", e));
@@ -39,29 +37,44 @@ export default function GameScreen() {
     }
   };
 
+  const saveProgress = async (finalScore) => {
+    if (!userId) return;
+    try {
+      await supabase.from('progress').insert({ user_id: userId, lesson_id: question.id, score: finalScore });
+      const { data: userData } = await supabase.from('users').select('xp, level').eq('id', userId).single();
+      if (userData) {
+        const newXp = userData.xp + finalScore;
+        const newLevel = Math.floor(newXp / 100) + 1;
+        await supabase.from('users').update({ xp: newXp, level: newLevel }).eq('id', userId);
+      }
+    } catch (err) {
+      console.error('Ошибка сохранения прогресса:', err);
+    }
+  };
+
   const handleAnswer = (text) => {
     setSelectedText(text);
     if (text === question.correctText) {
       setIsCorrect(true);
-      setScore(score + 10);
-      // Вибрация Telegram (если доступно)
+      const newScore = score + 10;
+      setScore(newScore);
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
-      
       setTimeout(() => {
         if (currentQ < QUESTIONS.length - 1) {
           setCurrentQ(currentQ + 1);
           setSelectedText(null);
           setIsCorrect(null);
         } else {
-          alert(`Игра окончена! Ваш счет: ${score + 10}`);
+          saveProgress(newScore);
+          alert(`Игра окончена! Ваш счет: ${newScore}`);
         }
       }, 1500);
     } else {
       setIsCorrect(false);
       setHearts(hearts - 1);
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
-      
       if (hearts - 1 <= 0) {
+        saveProgress(score);
         alert("Игра окончена! Вы потеряли все жизни.");
       }
     }
@@ -74,46 +87,18 @@ export default function GameScreen() {
         <span>❤️ {hearts}</span>
         <span>⭐ {score}</span>
       </div>
-
       <audio ref={audioRef} src={question.audioUrl} />
-      <button 
-        onClick={handlePlayAudio} 
-        style={{ width: '100%', padding: '15px', fontSize: '20px', marginBottom: '20px', cursor: 'pointer', borderRadius: '8px' }}
-      >
-        🔊 Прослушать снова
-      </button>
-
+      <button onClick={handlePlayAudio} style={{ width: '100%', padding: '15px', fontSize: '20px', marginBottom: '20px', cursor: 'pointer', borderRadius: '8px' }}>🔊 Прослушать снова</button>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
         {question.options.map((opt) => (
           <div key={opt.id} style={{ textAlign: 'center' }}>
-            <img 
-              src={opt.img} 
-              alt={opt.text} 
-              style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '10px', border: '2px solid #ccc' }} 
-            />
+            <img src={opt.img} alt={opt.text} style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '10px', border: '2px solid #ccc' }} />
           </div>
         ))}
       </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {question.options.map((opt) => (
-          <button
-            key={opt.id}
-            onClick={() => handleAnswer(opt.text)}
-            disabled={selectedText !== null}
-            style={{
-              padding: '15px',
-              fontSize: '18px',
-              borderRadius: '8px',
-              border: '1px solid #ccc',
-              cursor: 'pointer',
-              backgroundColor: selectedText === opt.text 
-                ? (isCorrect ? '#4CAF50' : '#F44336') 
-                : '#f0f0f0',
-              color: selectedText === opt.text ? 'white' : 'black',
-              transition: 'background-color 0.3s'
-            }}
-          >
+          <button key={opt.id} onClick={() => handleAnswer(opt.text)} disabled={selectedText !== null} style={{ padding: '15px', fontSize: '18px', borderRadius: '8px', border: '1px solid #ccc', cursor: 'pointer', backgroundColor: selectedText === opt.text ? (isCorrect ? '#4CAF50' : '#F44336') : '#f0f0f0', color: selectedText === opt.text ? 'white' : 'black', transition: 'background-color 0.3s' }}>
             {opt.text}
           </button>
         ))}
