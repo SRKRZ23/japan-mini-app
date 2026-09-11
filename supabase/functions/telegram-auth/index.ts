@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { validate as validateTelegramData } from "https://deno.land/x/telegram_webapp_auth@v1.0.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,7 +7,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Обработка CORS (предварительный запрос)
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -17,46 +15,69 @@ serve(async (req) => {
     const { initData } = await req.json()
     const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN')
 
-    if (!botToken) {
-      throw new Error('TELEGRAM_BOT_TOKEN не установлен')
-    }
+    if (!botToken) throw new Error('TELEGRAM_BOT_TOKEN не установлен')
 
-    // Валидация данных от Telegram
-    const isValid = validateTelegramData(initData, botToken, 86400) // 86400 = 24 часа
+    // --- ВСТРОЕННАЯ ПРОВЕРКА ДАННЫХ TELEGRAM ---
+    const urlParams = new URLSearchParams(initData)
+    const hash = urlParams.get('hash')
+    urlParams.delete('hash')
 
-    if (!isValid) {
+    const dataCheckString = Array.from(urlParams.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n')
+
+    const encoder = new TextEncoder()
+    
+    // Создаем секретный ключ из токена бота
+    const secretKey = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode('WebAppData'),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    )
+    const secretKeyBuffer = await crypto.subtle.sign('HMAC', secretKey, encoder.encode(botToken))
+    
+    // Вычисляем подпись
+    const dataKey = await crypto.subtle.importKey(
+      'raw',
+      secretKeyBuffer,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    )
+    const signatureBuffer = await crypto.subtle.sign('HMAC', dataKey, encoder.encode(dataCheckString))
+    const signatureArray = Array.from(new Uint8Array(signatureBuffer))
+    const calculatedHash = signatureArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+    if (calculatedHash !== hash) {
       return new Response(JSON.stringify({ error: 'Invalid Telegram data' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    // --- КОНЕЦ ПРОВЕРКИ ---
 
-    // Извлекаем данные пользователя из initData
-    const urlParams = new URLSearchParams(initData)
     const userJson = urlParams.get('user')
     const user = JSON.parse(userJson)
 
-    // Создаём клиент Supabase с Service Role Key (полный доступ)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Ищем пользователя в нашей таблице users по telegram_id
     const { data: existingUser, error: fetchError } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('telegram_id', user.id)
       .single()
 
-    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = "No rows found"
-      throw fetchError
-    }
+    if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
 
     let userId
 
     if (!existingUser) {
-      // Создаём нового пользователя
       const { data: newUser, error: createError } = await supabaseAdmin
         .from('users')
         .insert({
@@ -72,11 +93,9 @@ serve(async (req) => {
       if (createError) throw createError
       userId = newUser.id
     } else {
-      // Обновляем время последнего входа (если нужно)
       userId = existingUser.id
     }
 
-    // Возвращаем ID пользователя во фронтенд
     return new Response(JSON.stringify({ userId: userId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
