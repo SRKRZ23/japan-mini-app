@@ -6,6 +6,7 @@ import VocabScreen from './VocabScreen';
 import ProfileScreen from './ProfileScreen';
 import { supabase } from './supabaseClient';
 import { translations } from './data/translations';
+import { getCurrentHearts } from './utils/gameLogic';
 
 function App() {
   const [userId, setUserId] = useState(null);
@@ -14,6 +15,8 @@ function App() {
   const [currentScreen, setCurrentScreen] = useState('home');
   const [currentLang, setCurrentLang] = useState('EN');
   const [userProgress, setUserProgress] = useState({});
+  const [progressRaw, setProgressRaw] = useState([]);
+  const [userStats, setUserStats] = useState(null);
 
   const fetchProgress = async (uid) => {
     if (!uid) return;
@@ -23,10 +26,7 @@ function App() {
         .select('lesson_id, score, completed_at')
         .eq('user_id', uid);
 
-      if (error) {
-        console.error('fetchProgress error:', error);
-        return;
-      }
+      if (error) { console.error('fetchProgress error:', error); return; }
 
       const progressMap = {};
       if (data) {
@@ -37,19 +37,28 @@ function App() {
           }
         });
       }
-      console.log('Loaded progress:', progressMap);
+      setProgressRaw(data || []);
       setUserProgress(progressMap);
-    } catch (err) {
-      console.error('fetchProgress exception:', err);
+    } catch (err) { console.error('fetchProgress exception:', err); }
+  };
+
+  const fetchUserStats = async (uid) => {
+    if (!uid) return;
+    const { data, error } = await supabase
+      .from('users')
+      .select('coins, hearts, hearts_updated_at, xp, level, streak')
+      .eq('id', uid)
+      .single();
+    if (error) { console.error('fetchUserStats error:', error); return; }
+    if (data) {
+      data.hearts = getCurrentHearts(data);
+      setUserStats(data);
     }
   };
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
-    if (!tg) {
-      setLoading(false);
-      return;
-    }
+    if (!tg) { setLoading(false); return; }
     tg.ready();
     tg.expand();
 
@@ -62,17 +71,18 @@ function App() {
         if (data?.error) throw new Error(data.error);
         setUserId(data.userId);
         await fetchProgress(data.userId);
-      } catch (err) {
-        console.error('Auth error:', err);
-      } finally {
-        setLoading(false);
-      }
+        await fetchUserStats(data.userId);
+      } catch (err) { console.error('Auth error:', err); }
+      finally { setLoading(false); }
     };
     authenticate();
   }, []);
 
   const handleBackToHome = async () => {
-    if (userId) await fetchProgress(userId);
+    if (userId) {
+      await fetchProgress(userId);
+      await fetchUserStats(userId);
+    }
     setCurrentScreen('home');
   };
 
@@ -87,6 +97,8 @@ function App() {
           onSelectLesson={(lesson) => { setSelectedLesson(lesson); setCurrentScreen('game'); }}
           onNavigate={(screen) => setCurrentScreen(screen)}
           userProgress={userProgress}
+          progressRaw={progressRaw}
+          userStats={userStats}
           currentLang={currentLang}
           setCurrentLang={setCurrentLang}
         />
@@ -98,6 +110,7 @@ function App() {
           onBack={handleBackToHome}
           currentLang={currentLang}
           setCurrentLang={setCurrentLang}
+          userStats={userStats}
         />
       )}
       {currentScreen === 'leaderboard' && (
@@ -129,3 +142,4 @@ function App() {
 }
 
 export default App;
+

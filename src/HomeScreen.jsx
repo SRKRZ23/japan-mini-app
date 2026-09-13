@@ -1,6 +1,7 @@
 import React from 'react';
 import { lessons } from './data/lessons';
 import { translations } from './data/translations';
+import { calculateStreak, calculateDailyCount, MAX_HEARTS, getCurrentHearts, getNextHeartIn } from './utils/gameLogic';
 
 const MASCOT_URL = "https://lh3.googleusercontent.com/aida-public/AB6AXuA7UelOZ2Dqt3xlIBxJeuKOM_G-rHLltGDraYhK9G2EmXdcmR4BmwXuAfUpD3jE8PzDKW1erjTaqzWnswlC4rflofRwZMsqTJDJ0lZkwGiPKEvB1QY_5omheM0RGTQXqLw_lOH7faIgoPr5dTIsaZl1yk_1K0x7M31pbrBYAfXpv-6XYi6D286mpD5qD6Sk78AvSb_Y75IfSUSRUfiHs9Gcb0zs-q1wBr9IBFgv1MP0_fYhWUFVYyL8";
 
@@ -13,10 +14,18 @@ const NODE_POSITIONS = [
   { translate: '64px',  icon: 'military_tech' },
 ];
 
-export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, currentLang, setCurrentLang }) {
+export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, progressRaw, userStats, currentLang, setCurrentLang }) {
   const t = translations[currentLang];
   const completedCount = Object.keys(userProgress).length;
   const currentLessonIndex = Math.min(completedCount, lessons.length - 1);
+
+  // Real stats
+  const streak = calculateStreak(progressRaw);
+  const hearts = userStats ? getCurrentHearts(userStats) : MAX_HEARTS;
+  const coins = userStats?.coins ?? 0;
+  const dailyCount = calculateDailyCount(progressRaw);
+  const dailyGoal = 2;
+  const nextHeartIn = userStats ? getNextHeartIn(userStats) : null;
 
   const getStars = (lessonId) => {
     const progress = userProgress[String(lessonId)];
@@ -40,7 +49,9 @@ export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, c
             </div>
             <div className="flex flex-col">
               <h1 className="font-headline-sm text-headline-sm tracking-tight">{t.title}</h1>
-              <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">{t.level} 1 &middot; {t.beginner}</span>
+              <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">
+                {t.level} {userStats?.level || 1} &middot; {t.beginner}
+              </span>
             </div>
           </div>
           <div className="flex items-center bg-surface-container-high p-0.5 rounded-full shadow-sm">
@@ -54,21 +65,23 @@ export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, c
       </header>
 
       <main className="flex-1 flex flex-col pt-20 pb-safe px-margin gap-space-md">
+        {/* REAL STATS */}
         <div className="py-space-xs bg-surface-container-lowest grid grid-cols-3 gap-1.5 shadow-sm rounded-xl">
           <div className="flex items-center justify-center gap-1 py-1 px-1.5 rounded-xl bg-tertiary-fixed/40">
             <span className="material-symbols-outlined text-tertiary text-[18px]">local_fire_department</span>
-            <span className="font-stat-counter text-stat-counter text-tertiary">7d</span>
+            <span className="font-stat-counter text-stat-counter text-tertiary">{streak}d</span>
           </div>
           <div className="flex items-center justify-center gap-1 py-1 px-1.5 rounded-xl bg-secondary-fixed/50">
             <span className="material-symbols-outlined text-secondary text-[18px]">favorite</span>
-            <span className="font-stat-counter text-stat-counter text-secondary">5/5</span>
+            <span className="font-stat-counter text-stat-counter text-secondary">{hearts}/{MAX_HEARTS}</span>
           </div>
           <div className="flex items-center justify-center gap-1 py-1 px-1.5 rounded-xl bg-surface-container">
             <span className="material-symbols-outlined text-tertiary-container text-[18px]">monetization_on</span>
-            <span className="font-stat-counter text-stat-counter text-on-surface">340</span>
+            <span className="font-stat-counter text-stat-counter text-on-surface">{coins}</span>
           </div>
         </div>
 
+        {/* UNIT BANNER */}
         <div className="p-space-md rounded-xl bg-primary text-on-primary shadow-md relative overflow-hidden">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-1.5">
@@ -87,6 +100,7 @@ export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, c
           </div>
         </div>
 
+        {/* PATH */}
         <div className="relative w-full flex flex-col items-center py-4">
           <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }} xmlns="http://www.w3.org/2000/svg">
             <path d="M 180 70 C 180 120, 110 130, 110 170 C 110 210, 260 220, 260 270 C 260 320, 180 340, 180 390 C 180 430, 90 450, 90 500 C 90 550, 260 570, 260 630" fill="none" stroke="#bbcabf" strokeDasharray="10 8" strokeLinecap="round" strokeWidth="8" opacity="0.5" />
@@ -124,23 +138,32 @@ export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, c
           </div>
         </div>
 
+        {/* DAILY MISSION — REAL */}
         <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-center justify-between">
           <div className="flex items-center gap-space-sm min-w-0">
-            <div className="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary shrink-0">
-              <span className="material-symbols-outlined text-[22px]">target</span>
+            <div className={'w-10 h-10 rounded-full flex items-center justify-center shrink-0 ' + (dailyCount >= dailyGoal ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-secondary-container/20 text-secondary')}>
+              <span className="material-symbols-outlined text-[22px]">{dailyCount >= dailyGoal ? 'check_circle' : 'target'}</span>
             </div>
             <div className="flex flex-col min-w-0">
               <span className="font-label-sm text-label-sm text-secondary uppercase font-bold tracking-wider">{t.dailyMission}</span>
-              <span className="font-body-md text-body-md text-on-surface truncate">{t.complete2} (0/2)</span>
+              <span className="font-body-md text-body-md text-on-surface truncate">{t.complete2} ({dailyCount}/{dailyGoal})</span>
             </div>
           </div>
-          <div className="px-2.5 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm shrink-0 flex items-center gap-1 shadow-sm">
-            <span>+50</span>
+          <div className={'px-2.5 py-1 rounded-full font-label-sm text-label-sm shrink-0 flex items-center gap-1 shadow-sm ' + (dailyCount >= dailyGoal ? 'bg-primary text-on-primary' : 'bg-tertiary-fixed text-on-tertiary-fixed')}>
+            <span>{dailyCount >= dailyGoal ? '✓' : '+50'}</span>
             <span className="material-symbols-outlined text-[14px]">monetization_on</span>
           </div>
         </div>
+
+        {/* HEART REGEN HINT */}
+        {nextHeartIn && (
+          <div className="px-margin text-center text-[11px] text-on-surface-variant">
+            ❤️ Next heart in ~{nextHeartIn} min
+          </div>
+        )}
       </main>
 
+      {/* BOTTOM NAV */}
       <div className="fixed bottom-0 inset-x-0 bg-surface-container-lowest shadow-lg px-space-sm py-2 flex items-center justify-around z-40 pb-safe max-w-lg mx-auto">
         <button className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl bg-primary-fixed text-on-primary-fixed">
           <span className="material-symbols-outlined text-[22px]">explore</span>

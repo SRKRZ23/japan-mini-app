@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { translations } from './data/translations';
+import { playDing, playBuzz, getCurrentHearts, MAX_HEARTS } from './utils/gameLogic';
 
-export default function GameScreen({ lesson, userId, onBack, currentLang, setCurrentLang }) {
+export default function GameScreen({ lesson, userId, onBack, currentLang, setCurrentLang, userStats }) {
   const [currentQ, setCurrentQ] = useState(0);
   const [score, setScore] = useState(0);
-  const [hearts, setHearts] = useState(5);
+  const [hearts, setHearts] = useState(() => getCurrentHearts(userStats));
+  const [coinsEarned, setCoinsEarned] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(null);
@@ -29,9 +31,10 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
     return () => clearTimeout(timer);
   }, [currentQ]);
 
-  const saveProgress = async (finalScore) => {
+  const saveProgress = async (finalScore, finalCoins) => {
     if (!userId) return;
     try {
+      // Save progress (upsert)
       const { data: existing } = await supabase
         .from('progress')
         .select('score')
@@ -50,24 +53,55 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
         completed_at: new Date().toISOString()
       }, { onConflict: 'user_id,lesson_id' });
 
-      if (improvement > 0) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('xp, level')
-          .eq('id', userId)
-          .single();
+      // Update user: XP + coins + hearts + streak
+      const { data: userData } = await supabase
+        .from('users')
+        .select('xp, level, coins, streak')
+        .eq('id', userId)
+        .single();
 
-        if (userData) {
-          const newXp = (userData.xp || 0) + improvement;
-          const newLevel = Math.floor(newXp / 100) + 1;
-          await supabase
-            .from('users')
-            .update({ xp: newXp, level: newLevel })
-            .eq('id', userId);
+      if (userData) {
+        const newXp = (userData.xp || 0) + Math.max(0, improvement);
+        const newLevel = Math.floor(newXp / 100) + 1;
+        const newCoins = (userData.coins || 0) + finalCoins;
+
+        // Calculate streak
+        const { data: allProgress } = await supabase
+          .from('progress')
+          .select('completed_at')
+          .eq('user_id', userId);
+
+        let streak = 0;
+        if (allProgress && allProgress.length > 0) {
+          const dates = [...new Set(allProgress.map(p =>
+            new Date(p.completed_at).toISOString().split('T')[0]
+          ))].sort().reverse();
+          const today = new Date().toISOString().split('T')[0];
+          const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+          if (dates[0] === today || dates[0] === yesterday) {
+            streak = 1;
+            for (let i = 1; i < dates.length; i++) {
+              const diff = Math.round((new Date(dates[i-1]) - new Date(dates[i])) / 86400000);
+              if (diff === 1) streak++;
+              else break;
+            }
+          }
         }
-      }
 
-      console.log('Saved:', previousScore, '->', newBestScore, '(+' + improvement + ' XP)');
+        await supabase
+          .from('users')
+          .update({
+            xp: newXp,
+            level: newLevel,
+            coins: newCoins,
+            hearts: hearts,
+            hearts_updated_at: new Date().toISOString(),
+            streak: streak
+          })
+          .eq('id', userId);
+
+        console.log('Saved:', previousScore, '->', newBestScore, '(+' + improvement + ' XP, +' + finalCoins + ' coins)');
+      }
     } catch (err) {
       console.error('saveProgress error:', err);
     }
@@ -78,20 +112,24 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
     setIsAnswered(true);
     const correct = selectedId === question.correctId;
     setIsCorrect(correct);
+
     try {
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred(correct ? 'success' : 'error');
     } catch (e) {}
 
     if (correct) {
+      playDing();
       setScore(score + 20);
+      setCoinsEarned(coinsEarned + 5);
     } else {
-      setHearts(hearts - 1);
+      playBuzz();
+      setHearts(Math.max(0, hearts - 1));
     }
   };
 
   const handleNext = async () => {
     if (!isCorrect && hearts <= 0) {
-      await saveProgress(score);
+      await saveProgress(score, coinsEarned);
       alert(t.gameOver);
       onBack();
       return;
@@ -102,8 +140,8 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
       setIsAnswered(false);
       setIsCorrect(null);
     } else {
-      await saveProgress(score);
-      alert(t.lessonComplete + score);
+      await saveProgress(score, coinsEarned);
+      alert(t.lessonComplete + score + ' XP, +' + coinsEarned + ' coins');
       onBack();
     }
   };
@@ -163,7 +201,7 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
           <div className="flex items-center justify-between">
             <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">Q {currentQ + 1} of {lesson.questions.length}</span>
             <span className="font-stat-counter text-stat-counter text-tertiary flex items-center gap-0.5">
-              <span className="material-symbols-outlined text-[16px]">bolt</span> +20 {t.xp}
+              <span className="material-symbols-outlined text-[16px]">bolt</span> +20 {t.xp} &middot; +5 💰
             </span>
           </div>
           <div className="w-full h-3 bg-surface-container-high rounded-full overflow-hidden p-0.5 shadow-inner">
@@ -255,7 +293,7 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
               </div>
               <div className="flex flex-col">
                 <span className={'font-headline-sm text-headline-sm font-extrabold ' + (isCorrect ? 'text-primary' : 'text-error')}>{isCorrect ? t.correct : t.incorrect}</span>
-                <span className="font-label-sm text-label-sm text-tertiary font-bold">{isCorrect ? t.reward : ''}</span>
+                <span className="font-label-sm text-label-sm text-tertiary font-bold">{isCorrect ? '+20 XP, +5 💰' : ''}</span>
               </div>
             </div>
           </div>
@@ -281,3 +319,4 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
     </div>
   );
 }
+
