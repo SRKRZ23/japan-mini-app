@@ -19,10 +19,11 @@ export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, c
   const currentLessonIndex = Math.min(completedCount, lessons.length - 1);
 
   const getStars = (lessonId) => {
-    const progress = userProgress[lessonId];
+    const progress = userProgress[String(lessonId)];
     if (!progress) return 0;
     const lessonData = lessons.find(l => l.id === lessonId);
-    const maxScore = lessonData ? lessonData.questions.length * 20 : 100;
+    if (!lessonData) return 0;
+    const maxScore = lessonData.questions.length * 20;
     const percent = (progress.score / maxScore) * 100;
     if (percent >= 90) return 3;
     if (percent >= 60) return 2;
@@ -42,20 +43,17 @@ export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, c
               <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">{t.level} 1 &middot; {t.beginner}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-surface-container-high p-0.5 rounded-full shadow-sm">
-              {['RU', 'UZ', 'EN'].map(lang => (
-                <button key={lang} onClick={() => setCurrentLang(lang)} className={`px-2 py-0.5 rounded-full font-label-sm text-label-sm transition-all ${currentLang === lang ? 'bg-surface-container-lowest text-primary shadow-sm font-bold' : 'text-on-surface-variant'}`}>
-                  {lang}
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center bg-surface-container-high p-0.5 rounded-full shadow-sm">
+            {['RU', 'UZ', 'EN'].map(lang => (
+              <button key={lang} onClick={() => setCurrentLang(lang)} className={'px-2 py-0.5 rounded-full font-label-sm text-label-sm transition-all ' + (currentLang === lang ? 'bg-surface-container-lowest text-primary shadow-sm font-bold' : 'text-on-surface-variant')}>
+                {lang}
+              </button>
+            ))}
           </div>
         </div>
       </header>
 
       <main className="flex-1 flex flex-col pt-20 pb-safe px-margin gap-space-md">
-        {/* STATS */}
         <div className="py-space-xs bg-surface-container-lowest grid grid-cols-3 gap-1.5 shadow-sm rounded-xl">
           <div className="flex items-center justify-center gap-1 py-1 px-1.5 rounded-xl bg-tertiary-fixed/40">
             <span className="material-symbols-outlined text-tertiary text-[18px]">local_fire_department</span>
@@ -71,7 +69,6 @@ export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, c
           </div>
         </div>
 
-        {/* UNIT BANNER */}
         <div className="p-space-md rounded-xl bg-primary text-on-primary shadow-md relative overflow-hidden">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-1.5">
@@ -86,11 +83,10 @@ export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, c
           <h2 className="font-headline-sm text-headline-sm tracking-tight">{t.greetings}</h2>
           <p className="font-body-sm text-body-sm text-inverse-primary/90 mt-0.5">{t.subtitle}</p>
           <div className="mt-space-sm w-full bg-on-primary-fixed-variant/40 h-2 rounded-full overflow-hidden">
-            <div className="bg-primary-fixed h-full rounded-full" style={{ width: (completedCount / lessons.length) * 100 + "%" }}></div>
+            <div className="bg-primary-fixed h-full rounded-full" style={{ width: (completedCount / lessons.length) * 100 + '%' }}></div>
           </div>
         </div>
 
-        {/* PATH */}
         <div className="relative w-full flex flex-col items-center py-4">
           <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }} xmlns="http://www.w3.org/2000/svg">
             <path d="M 180 70 C 180 120, 110 130, 110 170 C 110 210, 260 220, 260 270 C 260 320, 180 340, 180 390 C 180 430, 90 450, 90 500 C 90 550, 260 570, 260 630" fill="none" stroke="#bbcabf" strokeDasharray="10 8" strokeLinecap="round" strokeWidth="8" opacity="0.5" />
@@ -103,7 +99,7 @@ export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, c
               const pos = NODE_POSITIONS[idx % NODE_POSITIONS.length];
 
               return (
-                <div key={lesson.id} className="flex flex-col items-center" style={{ transform: "translateX(" + pos.translate + ")" }}>
+                <div key={lesson.id} className="flex flex-col items-center" style={{ transform: 'translateX(' + pos.translate + ')' }}>
                   {isCurrent && (
                     <div className="mb-2 px-3 py-1 rounded-full bg-primary text-on-primary shadow-lg flex items-center gap-1.5 animate-bounce">
                       <span className="material-symbols-outlined text-primary-fixed text-[16px]">play_arrow</span>
@@ -112,13 +108,13 @@ export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, c
                   )}
                   <div className="relative">
                     {isCurrent && <div className="absolute -inset-2 rounded-full bg-primary/20 animate-ping"></div>}
-                    <button onClick={() => onSelectLesson(lesson)} className={"relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform " + (isCompleted || isCurrent ? "bg-primary-container text-on-primary" : "bg-surface-container-high text-on-surface-variant")}>
+                    <button onClick={() => onSelectLesson(lesson)} className={'relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform ' + (isCompleted || isCurrent ? 'bg-primary-container text-on-primary' : 'bg-surface-container-high text-on-surface-variant')}>
                       <span className="material-symbols-outlined text-[30px]">{pos.icon}</span>
                     </button>
                   </div>
                   <div className="flex items-center gap-0.5 mt-1.5">
                     {[1, 2, 3].map(star => (
-                      <span key={star} className={`material-symbols-outlined text-[16px] ${star <= stars ? 'text-tertiary-container' : 'text-outline-variant'}`}>star</span>
+                      <span key={star} className={'material-symbols-outlined text-[16px] ' + (star <= stars ? 'text-tertiary-container' : 'text-outline-variant')}>star</span>
                     ))}
                   </div>
                   <span className="font-label-md text-label-md mt-0.5 text-center max-w-[140px] text-on-surface">{idx + 1}. {lesson.title}</span>
@@ -128,7 +124,6 @@ export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, c
           </div>
         </div>
 
-        {/* DAILY MISSION */}
         <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-center justify-between">
           <div className="flex items-center gap-space-sm min-w-0">
             <div className="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary shrink-0">
@@ -146,7 +141,6 @@ export default function HomeScreen({ onSelectLesson, onNavigate, userProgress, c
         </div>
       </main>
 
-      {/* BOTTOM NAV */}
       <div className="fixed bottom-0 inset-x-0 bg-surface-container-lowest shadow-lg px-space-sm py-2 flex items-center justify-around z-40 pb-safe max-w-lg mx-auto">
         <button className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl bg-primary-fixed text-on-primary-fixed">
           <span className="material-symbols-outlined text-[22px]">explore</span>

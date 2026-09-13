@@ -32,15 +32,44 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
   const saveProgress = async (finalScore) => {
     if (!userId) return;
     try {
-      await supabase.from('progress').insert({ user_id: userId, lesson_id: lesson.id, score: finalScore });
-      const { data: userData } = await supabase.from('users').select('xp, level').eq('id', userId).single();
-      if (userData) {
-        const newXp = userData.xp + finalScore;
-        const newLevel = Math.floor(newXp / 100) + 1;
-        await supabase.from('users').update({ xp: newXp, level: newLevel }).eq('id', userId);
+      const { data: existing } = await supabase
+        .from('progress')
+        .select('score')
+        .eq('user_id', userId)
+        .eq('lesson_id', lesson.id)
+        .maybeSingle();
+
+      const previousScore = existing?.score || 0;
+      const newBestScore = Math.max(previousScore, finalScore);
+      const improvement = newBestScore - previousScore;
+
+      await supabase.from('progress').upsert({
+        user_id: userId,
+        lesson_id: lesson.id,
+        score: newBestScore,
+        completed_at: new Date().toISOString()
+      }, { onConflict: 'user_id,lesson_id' });
+
+      if (improvement > 0) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('xp, level')
+          .eq('id', userId)
+          .single();
+
+        if (userData) {
+          const newXp = (userData.xp || 0) + improvement;
+          const newLevel = Math.floor(newXp / 100) + 1;
+          await supabase
+            .from('users')
+            .update({ xp: newXp, level: newLevel })
+            .eq('id', userId);
+        }
       }
+
+      console.log('Saved:', previousScore, '->', newBestScore, '(+' + improvement + ' XP)');
     } catch (err) {
-      console.error('Error saving progress:', err);
+      console.error('saveProgress error:', err);
     }
   };
 
@@ -49,7 +78,9 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
     setIsAnswered(true);
     const correct = selectedId === question.correctId;
     setIsCorrect(correct);
-    window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred(correct ? 'success' : 'error');
+    try {
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred(correct ? 'success' : 'error');
+    } catch (e) {}
 
     if (correct) {
       setScore(score + 20);
@@ -77,7 +108,6 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
     }
   };
 
-  // Логика цветов для карточек и кнопок
   const getCardClass = (opt) => {
     const isSelected = selectedId === opt.id;
     let base = "cursor-pointer relative bg-surface-container-lowest rounded-xl p-space-xs flex flex-col items-center transition-all duration-200 ";
@@ -88,7 +118,7 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
       return base + "opacity-50 shadow-sm";
     }
     if (isSelected) return base + "bg-primary-container/10 border-2 border-primary -translate-y-0.5 shadow-md";
-    return base + "shadow-sm opacity-90 hover:opacity-100";
+    return base + "shadow-sm opacity-90";
   };
 
   const getWordBtnClass = (opt) => {
@@ -101,7 +131,7 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
       return base + "bg-surface-container text-on-surface-variant opacity-50";
     }
     if (isSelected) return base + "bg-primary text-on-primary shadow-md";
-    return base + "bg-surface-container-lowest text-on-surface hover:bg-surface-container-low";
+    return base + "bg-surface-container-lowest text-on-surface";
   };
 
   return (
@@ -109,7 +139,7 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
       <audio ref={audioRef} src={question.audioUrl} />
       <header className="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)] max-w-lg mx-auto">
         <div className="h-16 px-margin flex items-center justify-between">
-          <button onClick={onBack} className="w-11 h-11 -ml-space-xs flex items-center justify-center text-on-surface hover:text-primary transition-colors">
+          <button onClick={onBack} className="w-11 h-11 -ml-space-xs flex items-center justify-center text-on-surface">
             <span className="material-symbols-outlined text-[24px]">arrow_back</span>
           </button>
           <div className="flex items-center gap-space-xs">
@@ -119,7 +149,7 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
             </div>
             <div className="flex items-center bg-surface-container-high p-0.5 rounded-full shadow-sm">
               {['RU', 'UZ', 'EN'].map(lang => (
-                <button key={lang} onClick={() => setCurrentLang(lang)} className={`px-2 py-0.5 rounded-full font-label-sm text-label-sm transition-all ${currentLang === lang ? 'bg-surface-container-lowest text-primary shadow-sm font-bold' : 'text-on-surface-variant'}`}>
+                <button key={lang} onClick={() => setCurrentLang(lang)} className={'px-2 py-0.5 rounded-full font-label-sm text-label-sm transition-all ' + (currentLang === lang ? 'bg-surface-container-lowest text-primary shadow-sm font-bold' : 'text-on-surface-variant')}>
                   {lang}
                 </button>
               ))}
@@ -137,7 +167,7 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
             </span>
           </div>
           <div className="w-full h-3 bg-surface-container-high rounded-full overflow-hidden p-0.5 shadow-inner">
-            <div className="h-full bg-primary-container rounded-full relative shadow-sm transition-all duration-500" style={{ width: `${((currentQ + 1) / lesson.questions.length) * 100}%` }}></div>
+            <div className="h-full bg-primary-container rounded-full relative shadow-sm transition-all duration-500" style={{ width: ((currentQ + 1) / lesson.questions.length) * 100 + '%' }}></div>
           </div>
         </div>
 
@@ -176,7 +206,7 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
             <div key={opt.id} onClick={() => !isAnswered && setSelectedId(opt.id)} className={getCardClass(opt)}>
               <div className="w-full aspect-square rounded-lg overflow-hidden relative bg-surface-container flex items-center justify-center text-6xl">
                 {opt.visual}
-                <div className={`absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full font-stat-counter text-stat-counter shadow-sm ${selectedId === opt.id ? 'bg-primary text-on-primary' : 'bg-surface-container-highest text-on-surface-variant'}`}>
+                <div className={'absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full font-stat-counter text-stat-counter shadow-sm ' + (selectedId === opt.id ? 'bg-primary text-on-primary' : 'bg-surface-container-highest text-on-surface-variant')}>
                   {opt.id.toUpperCase()}
                 </div>
                 {isAnswered && opt.id === question.correctId && (
@@ -197,7 +227,7 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
 
         <div className="flex items-center justify-between pt-space-xs">
           <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-bold">{t.matchScript}</span>
-          <button onClick={() => setShowFurigana(!showFurigana)} className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface">
+          <button onClick={() => setShowFurigana(!showFurigana)} className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container text-on-surface">
             <span className="material-symbols-outlined text-[16px] text-primary">translate</span>
             <span className="font-label-sm text-label-sm font-bold">{t.furigana}: {showFurigana ? 'ON' : 'OFF'}</span>
           </button>
@@ -206,24 +236,25 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
         <div className="grid grid-cols-2 gap-space-sm select-none">
           {options.map((opt) => {
             const isSelected = selectedId === opt.id;
+            const highlight = isSelected || (isAnswered && opt.id === question.correctId);
             return (
               <button key={opt.id} onClick={() => !isAnswered && setSelectedId(opt.id)} className={getWordBtnClass(opt)}>
-                {showFurigana && <span className={`text-[11px] leading-none mb-0.5 ${isSelected || (isAnswered && opt.id === question.correctId) ? 'opacity-90' : 'opacity-70'}`}>{opt.furigana}</span>}
+                {showFurigana && <span className={'text-[11px] leading-none mb-0.5 ' + (highlight ? 'opacity-90' : 'opacity-70')}>{opt.furigana}</span>}
                 <span className="font-japanese-card text-headline-sm font-bold tracking-wide">{opt.kanji}</span>
-                <span className={`font-body-sm text-body-sm mt-0.5 ${isSelected || (isAnswered && opt.id === question.correctId) ? 'text-on-primary/90' : 'text-on-surface-variant'}`}>{opt.translation[currentLang]}</span>
+                <span className={'font-body-sm text-body-sm mt-0.5 ' + (highlight ? 'text-on-primary/90' : 'text-on-surface-variant')}>{opt.translation[currentLang]}</span>
               </button>
             );
           })}
         </div>
 
         {isAnswered && (
-          <div className={`rounded-xl p-space-sm flex items-center justify-between shadow-sm transition-all duration-300 ${isCorrect ? 'bg-primary-fixed/30' : 'bg-error-container/30'}`}>
+          <div className={'rounded-xl p-space-sm flex items-center justify-between shadow-sm transition-all duration-300 ' + (isCorrect ? 'bg-primary-fixed/30' : 'bg-error-container/30')}>
             <div className="flex items-center gap-space-xs">
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-sm ${isCorrect ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-error text-on-error'}`}>
+              <div className={'w-9 h-9 rounded-full flex items-center justify-center shadow-sm ' + (isCorrect ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-error text-on-error')}>
                 <span className="material-symbols-outlined text-[22px]">{isCorrect ? 'stars' : 'close'}</span>
               </div>
               <div className="flex flex-col">
-                <span className={`font-headline-sm text-headline-sm font-extrabold ${isCorrect ? 'text-primary' : 'text-error'}`}>{isCorrect ? t.correct : t.incorrect}</span>
+                <span className={'font-headline-sm text-headline-sm font-extrabold ' + (isCorrect ? 'text-primary' : 'text-error')}>{isCorrect ? t.correct : t.incorrect}</span>
                 <span className="font-label-sm text-label-sm text-tertiary font-bold">{isCorrect ? t.reward : ''}</span>
               </div>
             </div>
@@ -233,14 +264,14 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
         <div className="flex items-center gap-space-sm pt-space-xs">
           {!isAnswered ? (
             <>
-              <button onClick={onBack} className="px-4 py-3.5 rounded-xl bg-surface-container text-on-surface-variant font-label-md font-bold transition-transform active:scale-95 hover:bg-surface-container-high">{t.skip}</button>
-              <button onClick={handleSubmit} disabled={!selectedId} className={`flex-1 py-3.5 rounded-xl font-headline-sm flex items-center justify-center gap-space-xs shadow-md transition-all active:scale-[0.98] ${selectedId ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant cursor-not-allowed'}`}>
+              <button onClick={onBack} className="px-4 py-3.5 rounded-xl bg-surface-container text-on-surface-variant font-label-md font-bold">{t.skip}</button>
+              <button onClick={handleSubmit} disabled={!selectedId} className={'flex-1 py-3.5 rounded-xl font-headline-sm flex items-center justify-center gap-space-xs shadow-md transition-all ' + (selectedId ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant')}>
                 <span className="tracking-wide">{t.check}</span>
                 <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
               </button>
             </>
           ) : (
-            <button onClick={handleNext} className="flex-1 py-3.5 rounded-xl bg-primary text-on-primary font-headline-sm flex items-center justify-center gap-space-xs shadow-md transition-all active:scale-[0.98]">
+            <button onClick={handleNext} className="flex-1 py-3.5 rounded-xl bg-primary text-on-primary font-headline-sm flex items-center justify-center gap-space-xs shadow-md transition-all">
               <span className="tracking-wide">{currentQ < lesson.questions.length - 1 ? t.continue : t.finish}</span>
               <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
             </button>
@@ -250,4 +281,3 @@ export default function GameScreen({ lesson, userId, onBack, currentLang, setCur
     </div>
   );
 }
-
